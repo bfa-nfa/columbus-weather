@@ -1068,12 +1068,10 @@
                 
                 statusEl.classList.remove('loaded', 'stale-medium', 'stale-old');
                 
-                if (ageInMinutes > 180) {
-                    statusEl.classList.add('stale-old');
-                } else if (ageInMinutes > 60) {
-                    statusEl.classList.add('stale-medium');
+                if (ageInMinutes > 45) { // Updated from 180
+                    statusEl.classList.add('stale-medium'); // Orange if > 45 mins
                 } else {
-                    statusEl.classList.add('loaded');
+                    statusEl.classList.add('loaded'); // Green if <= 45 mins
                 }
             });
         }
