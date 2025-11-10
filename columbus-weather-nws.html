@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Columbus Weather — National Weather Service</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #FBFBFB;
+            --bg-secondary: #FFFFFF;
+            --bg-sidebar: #0D0E10;
+            --text-primary: #1F2023;
+            --text-secondary: #6B6F76;
+            --text-tertiary: #9CA0A7;
+            --border-color: #E8E8E9;
+            --accent-blue: #5E6AD2;
+            --accent-green: #26B5CE;
+            --accent-orange: #F2994A;
+            --accent-red: #EB5757;
+            --accent-yellow: #F2C94C;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
+            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            font-size: 14px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: var(--bg-sidebar);
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header {
+            padding: 24px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-green) 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .logo-text {
+            color: #FFFFFF;
+            font-weight: 600;
+            font-size: 16px;
+            letter-spacing: -0.2px;
+        }
+
+        .logo-badge {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .sidebar-section {
+            margin-bottom: 24px;
+        }
+
+        .sidebar-label {
+            color: #6B6F76;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            padding: 0 8px;
+        }
+
+        .zip-list {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .zip-item {
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            color: #9CA0A7;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            position: relative;
+        }
+
+        .zip-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #FFFFFF;
+        }
+
+        .zip-item.active {
+            background: rgba(94, 106, 210, 0.15);
+            color: #FFFFFF;
+        }
+
+        .zip-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 16px;
+            background: var(--accent-blue);
+            border-radius: 0 2px 2px 0;
+        }
+
+        .zip-code {
+            font-weight: 500;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .zip-name {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .zip-status {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .zip-status.loaded {
+            background: var(--accent-green);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 20px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+
+        .header-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: -0.2px;
+        }
+
+        .header-subtitle {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .fetch-button {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .fetch-button:hover {
+            background: #4E5AC8;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .fetch-button:active {
+            transform: translateY(0);
+        }
+
+        .fetch-button:disabled {
+            background: var(--text-tertiary);
+            cursor: not-allowed;
+            transform: none;
+            opacity: 0.6;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: rgba(38, 181, 206, 0.1);
+            border-radius: 6px;
+            font-size: 12px;
+            color: var(--accent-green);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Weather Display */
+        .weather-container {
+            flex: 1;
+            padding: 32px;
+            overflow-y: auto;
+            background: var(--bg-primary);
+        }
+
+        .weather-grid {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Current Conditions Card */
+        .current-conditions {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .conditions-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+        }
+
+        .location-info {
+            flex: 1;
+        }
+
+        .location-primary {
+            display: flex;
+            align-items: baseline;
+            gap: 16px;
+            margin-bottom: 8px;
+        }
+
+        .location-zip {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .location-name {
+            font-size: 18px;
+            color: var(--text-secondary);
+        }
+
+        .location-meta {
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .update-time {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            text-align: right;
+        }
+
+        .current-main {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 32px;
+            align-items: center;
+        }
+
+        .current-temp-display {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .current-temp {
+            font-size: 64px;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -2px;
+            line-height: 1;
+        }
+
+        .temp-unit {
+            font-size: 24px;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .current-description {
+            font-size: 18px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+        }
+
+        .current-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 24px;
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .detail-label {
+            font-size: 11px;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .detail-value {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        /* Forecast Cards */
+        .forecast-section {
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .forecast-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .period-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            transition: var(--transition);
+            cursor: default;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .period-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--accent-blue);
+        }
+
+        .period-card.is-day {
+            background: linear-gradient(to bottom, var(--bg-secondary) 0%, #FFF9F0 100%);
+        }
+
+        .period-card.is-night {
+            background: linear-gradient(to bottom, var(--bg-secondary) 0%, #F0F4FF 100%);
+        }
+
+        .period-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .period-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .period-date {
+            font-size: 11px;
+            color: var(--text-tertiary);
+        }
+
+        .period-temp {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+        }
+
+        .period-temp-unit {
+            font-size: 16px;
+            font-weight: 400;
+            color: var(--text-secondary);
+        }
+
+        .period-forecast {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: 16px;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .period-details {
+            display: grid;
+            gap: 8px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .period-detail {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .period-detail-label {
+            color: var(--text-tertiary);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .period-detail-value {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* Loading State */
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 400px;
+            color: var(--text-secondary);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .loading-subtext {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        /* Error State */
+        .error-container {
+            background: #FEF2F2;
+            border: 1px solid #FEE2E2;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            color: #991B1B;
+        }
+
+        .error-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .error-message {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        /* Welcome State */
+        .welcome-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 400px;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .welcome-icon {
+            font-size: 64px;
+            margin-bottom: 24px;
+            filter: grayscale(0.2);
+        }
+
+        .welcome-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .welcome-message {
+            font-size: 14px;
+            color: var(--text-secondary);
+            max-width: 400px;
+            line-height: 1.6;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+
+            .header {
+                padding: 16px 20px;
+            }
+
+            .weather-container {
+                padding: 20px;
+            }
+
+            .forecast-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .current-main {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon">🌤</div>
+                    <div class="logo-text">Weather</div>
+                    <div class="logo-badge">NWS</div>
+                </div>
+            </div>
+
+            <div class="sidebar-content">
+                <div class="sidebar-section">
+                    <div class="sidebar-label">Columbus Area</div>
+                    <div class="zip-list" id="zipList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <div class="header">
+                <div class="header-left">
+                    <div>
+                        <div class="header-title">Greater Columbus Weather</div>
+                        <div class="header-subtitle">National Weather Service — Official Forecast</div>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <div class="status-indicator">
+                        <span class="status-dot"></span>
+                        <span>Live Data</span>
+                    </div>
+                    <button class="fetch-button" id="fetchButton" onclick="fetchWeather()">
+                        <span>↻</span>
+                        <span>Refresh</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Weather Display -->
+            <div class="weather-container">
+                <div id="weatherDisplay" class="weather-grid">
+                    <div class="welcome-container">
+                        <div class="welcome-icon">🌈</div>
+                        <div class="welcome-title">Welcome to Columbus Weather</div>
+                        <div class="welcome-message">
+                            Select a location from the sidebar to view the official National Weather Service forecast.
+                            No API key required — all data is free and public.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Columbus area zip codes with coordinates
+        const columbusZipCodes = {
+            '43215': { lat: 39.9703, lon: -83.0042, name: 'Downtown' },
+            '43201': { lat: 39.9950, lon: -83.0038, name: 'Short North' },
+            '43202': { lat: 39.9889, lon: -82.9909, name: 'Campus Area' },
+            '43203': { lat: 39.9408, lon: -82.9647, name: 'Southeast' },
+            '43204': { lat: 39.9417, lon: -83.0817, name: 'Southwest' },
+            '43205': { lat: 39.9586, lon: -82.9144, name: 'East Columbus' },
+            '43206': { lat: 39.9444, lon: -82.9889, name: 'Bexley Area' },
+            '43207': { lat: 39.9031, lon: -82.9914, name: 'South Side' },
+            '43209': { lat: 39.9531, lon: -82.8619, name: 'Bexley' },
+            '43210': { lat: 39.9989, lon: -83.0178, name: 'OSU Campus' },
+            '43211': { lat: 40.0106, lon: -82.9731, name: 'Clintonville' },
+            '43212': { lat: 39.9839, lon: -83.0456, name: 'University District' },
+            '43213': { lat: 39.9703, lon: -82.8672, name: 'Whitehall' },
+            '43214': { lat: 40.0581, lon: -83.0189, name: 'North Campus' },
+            '43219': { lat: 40.0003, lon: -82.9433, name: 'East Side' },
+            '43220': { lat: 40.0539, lon: -83.0656, name: 'Upper Arlington N' },
+            '43221': { lat: 40.0247, lon: -83.0856, name: 'Upper Arlington' },
+            '43222': { lat: 39.9556, lon: -83.1011, name: 'West Side' },
+            '43223': { lat: 39.9339, lon: -83.1303, name: 'SW Columbus' },
+            '43224': { lat: 40.0419, lon: -82.9683, name: 'North Linden' },
+            '43227': { lat: 39.9403, lon: -82.8683, name: 'East Columbus' },
+            '43228': { lat: 39.9556, lon: -83.1389, name: 'West Columbus' },
+            '43229': { lat: 40.0836, lon: -82.9606, name: 'Northland' },
+            '43230': { lat: 40.0756, lon: -82.8839, name: 'Gahanna' },
+            '43231': { lat: 40.0839, lon: -82.9389, name: 'Minerva Park' },
+            '43232': { lat: 39.8675, lon: -82.8633, name: 'Reynoldsburg' },
+            '43235': { lat: 40.1092, lon: -83.0181, name: 'Worthington' },
+            '43240': { lat: 40.1453, lon: -83.1267, name: 'Powell' },
+            '43016': { lat: 40.1061, lon: -83.1531, name: 'Dublin South' },
+            '43017': { lat: 40.1264, lon: -83.1144, name: 'Dublin North' },
+            '43081': { lat: 40.1261, lon: -82.9289, name: 'Westerville' },
+            '43082': { lat: 40.1089, lon: -82.9011, name: 'Westerville S' },
+            '43123': { lat: 39.8814, lon: -83.0928, name: 'Grove City' },
+            '43026': { lat: 40.0336, lon: -83.1583, name: 'Hilliard' },
+            '43147': { lat: 39.8842, lon: -82.7536, name: 'Pickerington' },
+            '43054': { lat: 40.0842, lon: -82.8089, name: 'New Albany' }
+        };
+
+        let currentZipCode = '43215'; // Default to Downtown
+        let weatherData = {};
+        let gridPointsCache = {};
+
+        // Initialize sidebar
+        function initializeSidebar() {
+            const zipList = document.getElementById('zipList');
+            Object.entries(columbusZipCodes).forEach(([zip, data]) => {
+                const item = document.createElement('div');
+                item.className = 'zip-item';
+                item.dataset.zip = zip;
+                item.innerHTML = `
+                    <span class="zip-code">${zip}</span>
+                    <span class="zip-name">${data.name}</span>
+                    <span class="zip-status" id="status-${zip}"></span>
+                `;
+                item.onclick = () => selectZipCode(zip);
+                zipList.appendChild(item);
+            });
+            
+            // Set initial active state
+            document.querySelector(`[data-zip="${currentZipCode}"]`).classList.add('active');
+        }
+
+        function selectZipCode(zip) {
+            currentZipCode = zip;
+            
+            // Update sidebar active state
+            document.querySelectorAll('.zip-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-zip="${zip}"]`).classList.add('active');
+            
+            // Display weather if available, otherwise fetch
+            if (weatherData[zip]) {
+                displayWeather(zip);
+            } else {
+                fetchSingleLocation(zip);
+            }
+        }
+
+        async function getGridPoint(lat, lon) {
+            const cacheKey = `${lat},${lon}`;
+            
+            if (gridPointsCache[cacheKey]) {
+                return gridPointsCache[cacheKey];
+            }
+
+            try {
+                const response = await fetch(`https://api.weather.gov/points/${lat},${lon}`);
+                if (!response.ok) throw new Error(`Grid point error: ${response.status}`);
+                
+                const data = await response.json();
+                const gridData = {
+                    gridId: data.properties.gridId,
+                    gridX: data.properties.gridX,
+                    gridY: data.properties.gridY,
+                    forecastUrl: data.properties.forecast,
+                    forecastHourlyUrl: data.properties.forecastHourly,
+                    observationStationsUrl: data.properties.observationStations,
+                    office: data.properties.cwa
+                };
+                
+                gridPointsCache[cacheKey] = gridData;
+                return gridData;
+            } catch (error) {
+                console.error('Error getting grid point:', error);
+                throw error;
+            }
+        }
+
+        async function getCurrentConditions(stationsUrl) {
+            try {
+                // Get stations
+                const stationsResponse = await fetch(stationsUrl);
+                if (!stationsResponse.ok) return null;
+                
+                const stationsData = await stationsResponse.json();
+                if (!stationsData.features || stationsData.features.length === 0) return null;
+                
+                // Get latest observation from nearest station
+                const stationId = stationsData.features[0].properties.stationIdentifier;
+                const obsResponse = await fetch(`https://api.weather.gov/stations/${stationId}/observations/latest`);
+                if (!obsResponse.ok) return null;
+                
+                const obsData = await obsResponse.json();
+                return obsData.properties;
+            } catch (error) {
+                console.error('Error getting current conditions:', error);
+                return null;
+            }
+        }
+
+        async function fetchSingleLocation(zip) {
+            const coords = columbusZipCodes[zip];
+            const display = document.getElementById('weatherDisplay');
+            
+            display.innerHTML = `
+                <div class="loading-container">
+                    <div class="spinner"></div>
+                    <div class="loading-text">Loading weather for ${zip}...</div>
+                    <div class="loading-subtext">${coords.name}</div>
+                </div>
+            `;
+
+            try {
+                // Get grid point
+                const gridPoint = await getGridPoint(coords.lat, coords.lon);
+                
+                // Fetch forecast and current conditions in parallel
+                const [forecastResponse, currentConditions] = await Promise.all([
+                    fetch(gridPoint.forecastUrl),
+                    getCurrentConditions(gridPoint.observationStationsUrl)
+                ]);
+
+                if (!forecastResponse.ok) {
+                    throw new Error(`Forecast error: ${forecastResponse.status}`);
+                }
+
+                const forecastData = await forecastResponse.json();
+                
+                // Store weather data
+                weatherData[zip] = {
+                    forecast: forecastData.properties,
+                    current: currentConditions,
+                    gridPoint: gridPoint,
+                    timestamp: new Date()
+                };
+                
+                // Update status indicator
+                const statusEl = document.getElementById(`status-${zip}`);
+                if (statusEl) statusEl.classList.add('loaded');
+                
+                displayWeather(zip);
+                
+            } catch (error) {
+                displayError(error.message, zip);
+            }
+        }
+
+        async function fetchWeather() {
+            const button = document.getElementById('fetchButton');
+            button.disabled = true;
+            
+            // Fetch current location's weather
+            await fetchSingleLocation(currentZipCode);
+            
+            button.disabled = false;
+        }
+
+        function formatTemperature(temp) {
+            if (!temp && temp !== 0) return '--';
+            return Math.round(temp);
+        }
+
+        function celsiusToFahrenheit(celsius) {
+            return Math.round((celsius * 9/5) + 32);
+        }
+
+        function metersToMiles(meters) {
+            return Math.round(meters * 0.000621371 * 10) / 10;
+        }
+
+        function displayWeather(zip) {
+            const display = document.getElementById('weatherDisplay');
+            const data = weatherData[zip];
+            const coords = columbusZipCodes[zip];
+
+            if (!data) {
+                display.innerHTML = `
+                    <div class="error-container">
+                        <div class="error-title">No Data Available</div>
+                        <div class="error-message">Click the location to load weather data.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            const { forecast, current } = data;
+            let html = '';
+
+            // Current Conditions (if available)
+            if (current) {
+                const temp = current.temperature?.value;
+                const tempF = temp ? celsiusToFahrenheit(temp) : null;
+                const updateTime = new Date(current.timestamp).toLocaleTimeString('en-US', { 
+                    hour: 'numeric', 
+                    minute: '2-digit',
+                    hour12: true 
+                });
+
+                html += `
+                    <div class="current-conditions">
+                        <div class="conditions-header">
+                            <div class="location-info">
+                                <div class="location-primary">
+                                    <span class="location-zip">${zip}</span>
+                                    <span class="location-name">${coords.name}</span>
+                                </div>
+                                <div class="location-meta">
+                                    <span class="meta-item">📍 ${coords.lat.toFixed(4)}°N, ${Math.abs(coords.lon).toFixed(4)}°W</span>
+                                    <span class="meta-item">🏛️ NWS ${data.gridPoint.office}</span>
+                                </div>
+                            </div>
+                            <div class="update-time">
+                                Last updated: ${updateTime}
+                            </div>
+                        </div>
+
+                        <div class="current-main">
+                            <div>
+                                <div class="current-temp-display">
+                                    ${tempF ? `
+                                        <span class="current-temp">${tempF}</span>
+                                        <span class="temp-unit">°F</span>
+                                    ` : '<span class="current-temp">--</span>'}
+                                </div>
+                                <div class="current-description">
+                                    ${current.textDescription || 'Current conditions unavailable'}
+                                </div>
+                            </div>
+
+                            <div class="current-details">
+                                ${current.windSpeed?.value ? `
+                                    <div class="detail-item">
+                                        <span class="detail-label">Wind</span>
+                                        <span class="detail-value">${Math.round(current.windSpeed.value * 2.237)} mph ${current.windDirection?.value || ''}</span>
+                                    </div>
+                                ` : ''}
+                                ${current.relativeHumidity?.value ? `
+                                    <div class="detail-item">
+                                        <span class="detail-label">Humidity</span>
+                                        <span class="detail-value">${Math.round(current.relativeHumidity.value)}%</span>
+                                    </div>
+                                ` : ''}
+                                ${current.barometricPressure?.value ? `
+                                    <div class="detail-item">
+                                        <span class="detail-label">Pressure</span>
+                                        <span class="detail-value">${(current.barometricPressure.value / 100).toFixed(0)} mb</span>
+                                    </div>
+                                ` : ''}
+                                ${current.visibility?.value ? `
+                                    <div class="detail-item">
+                                        <span class="detail-label">Visibility</span>
+                                        <span class="detail-value">${metersToMiles(current.visibility.value)} mi</span>
+                                    </div>
+                                ` : ''}
+                                ${current.dewpoint?.value ? `
+                                    <div class="detail-item">
+                                        <span class="detail-label">Dewpoint</span>
+                                        <span class="detail-value">${celsiusToFahrenheit(current.dewpoint.value)}°F</span>
+                                    </div>
+                                ` : ''}
+                                ${current.heatIndex?.value && current.heatIndex.value > current.temperature?.value ? `
+                                    <div class="detail-item">
+                                        <span class="detail-label">Feels Like</span>
+                                        <span class="detail-value">${celsiusToFahrenheit(current.heatIndex.value)}°F</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Forecast
+            if (forecast && forecast.periods) {
+                html += `
+                    <div class="forecast-section">
+                        <div class="section-title">
+                            <span>📅</span>
+                            <span>7-Day Forecast</span>
+                        </div>
+                        <div class="forecast-cards">
+                `;
+
+                forecast.periods.slice(0, 14).forEach((period, index) => {
+                    const isDay = period.isDaytime;
+                    const date = new Date(period.startTime);
+                    const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    
+                    // Parse wind speed
+                    let windInfo = '';
+                    if (period.windSpeed) {
+                        windInfo = period.windSpeed;
+                    }
+
+                    html += `
+                        <div class="period-card ${isDay ? 'is-day' : 'is-night'}">
+                            <div class="period-header">
+                                <span class="period-name">${period.name}</span>
+                                <span class="period-date">${dateStr}</span>
+                            </div>
+                            
+                            <div class="period-temp">
+                                <span>${period.temperature}</span>
+                                <span class="period-temp-unit">°${period.temperatureUnit}</span>
+                            </div>
+                            
+                            <div class="period-forecast">
+                                ${period.shortForecast}
+                            </div>
+                            
+                            <div class="period-details">
+                                ${windInfo ? `
+                                    <div class="period-detail">
+                                        <span class="period-detail-label">💨 Wind</span>
+                                        <span class="period-detail-value">${windInfo}</span>
+                                    </div>
+                                ` : ''}
+                                ${period.probabilityOfPrecipitation?.value ? `
+                                    <div class="period-detail">
+                                        <span class="period-detail-label">☔ Precip</span>
+                                        <span class="period-detail-value">${period.probabilityOfPrecipitation.value}%</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+
+            display.innerHTML = html;
+        }
+
+        function displayError(message, zip) {
+            const display = document.getElementById('weatherDisplay');
+            const coords = zip ? columbusZipCodes[zip] : null;
+            
+            display.innerHTML = `
+                <div class="error-container">
+                    <div class="error-title">Unable to Load Weather Data</div>
+                    <div class="error-message">
+                        ${message}
+                        ${coords ? `<br>Location: ${zip} - ${coords.name}` : ''}
+                        <br><br>
+                        The National Weather Service API may be temporarily unavailable. Please try again in a moment.
+                    </div>
+                </div>
+            `;
+        }
+
+        // Initialize app
+        window.addEventListener('DOMContentLoaded', () => {
+            initializeSidebar();
+            // Auto-load weather for default location
+            fetchSingleLocation(currentZipCode);
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'r' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                fetchWeather();
+            }
+        });
+    </script>
+</body>
+</html>
