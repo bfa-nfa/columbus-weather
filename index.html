@@ -20,7 +20,7 @@
             --text-primary: #1F2023;
             --text-secondary: #6B6F76;
             --text-tertiary: #9CA0A7;
-            --border-color: #E8E8E9;
+            --border-color: #E8E8E8;
             --accent-blue: #5E6AD2;
             --accent-green: #26B5CE;
             --accent-orange: #F2994A;
@@ -56,6 +56,8 @@
             display: flex;
             flex-direction: column;
             flex-shrink: 0;
+            transition: left 0.3s ease; /* Added for mobile slide-in */
+            z-index: 1000; /* For mobile overlay */
         }
 
         .sidebar-header {
@@ -177,6 +179,12 @@
         .zip-status.loaded {
             background: var(--accent-green);
         }
+        .zip-status.stale-medium { /* Added for status lights */
+            background: var(--accent-orange);
+        }
+        .zip-status.stale-old { /* Added for status lights */
+            background: var(--accent-red);
+        }
 
         /* Main Content */
         .main-content {
@@ -184,6 +192,25 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            position: relative; /* Added for mobile overlay */
+        }
+
+        /* Mobile Overlay */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .sidebar-overlay.is-open {
+            display: block;
+            opacity: 1;
         }
 
         /* Header */
@@ -200,6 +227,18 @@
             display: flex;
             align-items: center;
             gap: 32px;
+        }
+        
+        /* Hamburger Button (Mobile Only) */
+        .hamburger-button {
+            display: none; /* Hidden by default */
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--text-primary);
+            cursor: pointer;
+            padding: 4px;
+            margin-right: -8px;
         }
 
         .header-title {
@@ -613,7 +652,22 @@
         /* Responsive */
         @media (max-width: 768px) {
             .sidebar {
-                display: none;
+                position: fixed;
+                left: -280px; /* Hidden off-screen */
+                top: 0;
+                height: 100%;
+                box-shadow: var(--shadow-lg);
+            }
+            .sidebar.is-open {
+                left: 0; /* Slide in */
+            }
+
+            .hamburger-button {
+                display: block; /* Show hamburger */
+            }
+            
+            .header-left {
+                gap: 16px; /* Space for hamburger */
             }
 
             .header {
@@ -636,7 +690,6 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Sidebar -->
         <div class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
@@ -654,11 +707,12 @@
             </div>
         </div>
 
-        <!-- Main Content -->
         <div class="main-content">
-            <!-- Header -->
+            <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
             <div class="header">
                 <div class="header-left">
+                    <button class="hamburger-button" id="hamburgerButton">☰</button>
                     <div>
                         <div class="header-title">Greater Columbus Weather</div>
                         <div class="header-subtitle">National Weather Service — Official Forecast</div>
@@ -669,7 +723,7 @@
                         <span class="status-dot"></span>
                         <span>Live Data</span>
                     </div>
-                    <button class="fetch-button" id="exportButton" onclick="exportToCSV()" style="background: var(--accent-green);">
+                    <button class="fetch-button" id="exportButton" onclick="exportToCSV()" style="background: var(--accent-green);" disabled>
                         <span>📊</span>
                         <span>Export CSV</span>
                     </button>
@@ -680,7 +734,6 @@
                 </div>
             </div>
 
-            <!-- Weather Display -->
             <div class="weather-container">
                 <div id="weatherDisplay" class="weather-grid">
                     <div class="welcome-container">
@@ -740,6 +793,11 @@
         let currentZipCode = '43215'; // Default to Downtown
         let weatherData = {};
         let gridPointsCache = {};
+        
+        // Mobile sidebar elements
+        const sidebar = document.querySelector('.sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        const hamburger = document.getElementById('hamburgerButton');
 
         // Initialize sidebar
         function initializeSidebar() {
@@ -760,6 +818,11 @@
             // Set initial active state
             document.querySelector(`[data-zip="${currentZipCode}"]`).classList.add('active');
         }
+        
+        function toggleSidebar() {
+            sidebar.classList.toggle('is-open');
+            overlay.classList.toggle('is-open');
+        }
 
         function selectZipCode(zip) {
             currentZipCode = zip;
@@ -769,6 +832,11 @@
                 item.classList.remove('active');
             });
             document.querySelector(`[data-zip="${zip}"]`).classList.add('active');
+            
+            // Close sidebar if on mobile
+            if (sidebar.classList.contains('is-open')) {
+                toggleSidebar();
+            }
             
             // Display weather if available, otherwise fetch
             if (weatherData[zip]) {
@@ -890,9 +958,16 @@
                 
                 // Update status indicator
                 const statusEl = document.getElementById(`status-${zip}`);
-                if (statusEl) statusEl.classList.add('loaded');
+                if (statusEl) {
+                    statusEl.classList.remove('stale-medium', 'stale-old');
+                    statusEl.classList.add('loaded');
+                }
                 
-                if (showLoading) {
+                // Enable export button after first successful load
+                document.getElementById('exportButton').disabled = false;
+                
+                // Update main display if this is the currently active zip
+                if (zip === currentZipCode) {
                     displayWeather(zip);
                 }
                 
@@ -900,7 +975,7 @@
                 
             } catch (error) {
                 console.error(`Error fetching ${zip}:`, error);
-                if (showLoading) {
+                if (zip === currentZipCode) { // Only show error if it's for the active view
                     displayError(error.message, zip);
                 }
                 return null;
@@ -910,45 +985,51 @@
         async function fetchAllLocations() {
             const button = document.getElementById('fetchButton');
             const exportBtn = document.getElementById('exportButton');
-            const display = document.getElementById('weatherDisplay');
             
             button.disabled = true;
             exportBtn.disabled = true;
             
-            display.innerHTML = `
-                <div class="loading-container">
-                    <div class="spinner"></div>
-                    <div class="loading-text">Loading weather for all locations...</div>
-                    <div class="loading-subtext">This may take a moment</div>
-                </div>
-            `;
-            
             // Clear all status indicators
             document.querySelectorAll('.zip-status').forEach(el => {
-                el.classList.remove('loaded');
+                el.classList.remove('loaded', 'stale-medium', 'stale-old');
             });
             
-            // Fetch all locations with a small delay to avoid rate limiting
-            let successCount = 0;
-            for (const zip of Object.keys(columbusZipCodes)) {
-                const result = await fetchSingleLocation(zip, false);
-                if (result) successCount++;
-                // Small delay to be nice to the API
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
+            // Fetch all locations in parallel
+            const promises = Object.keys(columbusZipCodes).map(zip => 
+                fetchSingleLocation(zip, false)
+            );
             
-            // Display current location's weather
+            await Promise.allSettled(promises);
+            
+            // Re-render current location just in case
             displayWeather(currentZipCode);
             
             // Show completion message
-            if (successCount === Object.keys(columbusZipCodes).length) {
-                console.log(`Successfully loaded all ${successCount} locations`);
-            } else {
-                console.log(`Loaded ${successCount} of ${Object.keys(columbusZipCodes).length} locations`);
-            }
+            console.log(`Finished refreshing all locations.`);
             
             button.disabled = false;
             exportBtn.disabled = false;
+        }
+        
+        // Function to update status dots based on data age
+        function updateStatusDots() {
+            const now = new Date();
+            Object.entries(weatherData).forEach(([zip, data]) => {
+                const statusEl = document.getElementById(`status-${zip}`);
+                if (!statusEl) return;
+                
+                const ageInMinutes = (now - data.timestamp) / 1000 / 60;
+                
+                statusEl.classList.remove('loaded', 'stale-medium', 'stale-old');
+                
+                if (ageInMinutes > 180) {
+                    statusEl.classList.add('stale-old');
+                } else if (ageInMinutes > 60) {
+                    statusEl.classList.add('stale-medium');
+                } else {
+                    statusEl.classList.add('loaded');
+                }
+            });
         }
 
         function exportToCSV() {
@@ -1107,6 +1188,7 @@
             const coords = columbusZipCodes[zip];
 
             if (!data) {
+                // This case should be rare now, but good to keep
                 display.innerHTML = `
                     <div class="error-container">
                         <div class="error-title">No Data Available</div>
@@ -1288,15 +1370,23 @@
         // Initialize app
         window.addEventListener('DOMContentLoaded', () => {
             initializeSidebar();
+            
+            // Setup mobile sidebar toggles
+            hamburger.addEventListener('click', toggleSidebar);
+            overlay.addEventListener('click', toggleSidebar);
+            
             // Auto-load weather for default location
             fetchSingleLocation(currentZipCode);
+            
+            // Start timer for status dot aging
+            setInterval(updateStatusDots, 60000); // Check every minute
         });
 
         // Keyboard shortcuts
         document.addEventListener('keypress', (e) => {
             if (e.key === 'r' && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
-                fetchWeather();
+                fetchAllLocations();
             }
         });
     </script>
