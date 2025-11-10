@@ -20,7 +20,7 @@
             --text-primary: #1F2023;
             --text-secondary: #6B6F76;
             --text-tertiary: #9CA0A7;
-            --border-color: #E8E8E8;
+            --border-color: #E8E8E9;
             --accent-blue: #5E6AD2;
             --accent-green: #26B5CE;
             --accent-orange: #F2994A;
@@ -179,10 +179,10 @@
         .zip-status.loaded {
             background: var(--accent-green);
         }
-        .zip-status.stale-medium { /* Added for status lights */
+        .zip-status.stale-medium {
             background: var(--accent-orange);
         }
-        .zip-status.stale-old { /* Added for status lights */
+        .zip-status.stale-old {
             background: var(--accent-red);
         }
 
@@ -192,7 +192,7 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            position: relative; /* Added for mobile overlay */
+            position: relative;
         }
 
         /* Mobile Overlay */
@@ -673,9 +673,42 @@
             .header {
                 padding: 16px 20px;
             }
+            
+            .header-actions {
+                gap: 8px; /* Tighter spacing on mobile */
+            }
+            
+            .fetch-button {
+                padding: 8px 12px; /* Smaller buttons on mobile */
+                font-size: 12px;
+            }
+            
+            .fetch-button span:first-child {
+                display: none; /* Hide button icons on mobile */
+            }
+            
+            .status-indicator {
+                display: none; /* Hide status indicator on mobile */
+            }
 
             .weather-container {
+                padding: 16px;
+            }
+            
+            .current-conditions {
                 padding: 20px;
+            }
+            
+            .location-zip {
+                font-size: 24px;
+            }
+            
+            .location-name {
+                font-size: 16px;
+            }
+            
+            .current-temp {
+                font-size: 56px;
             }
 
             .forecast-cards {
@@ -690,6 +723,7 @@
 </head>
 <body>
     <div class="app-container">
+        <!-- Sidebar -->
         <div class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
@@ -707,9 +741,12 @@
             </div>
         </div>
 
+        <!-- Main Content -->
         <div class="main-content">
+            <!-- Mobile Overlay -->
             <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
+            <!-- Header -->
             <div class="header">
                 <div class="header-left">
                     <button class="hamburger-button" id="hamburgerButton">☰</button>
@@ -734,14 +771,21 @@
                 </div>
             </div>
 
+            <!-- Weather Display -->
             <div class="weather-container">
                 <div id="weatherDisplay" class="weather-grid">
-                    <div class="welcome-container">
+                    <!-- Ghost Loader Structure -->
+                    <div class="welcome-container" id="ghostLoader" style="display: none;">
+                        <!-- You can replace this with a more detailed skeleton screen -->
+                        <div class="spinner"></div>
+                        <div class="loading-text">Loading initial data...</div>
+                    </div>
+                    
+                    <div class="welcome-container" id="welcomeMessage">
                         <div class="welcome-icon">🌈</div>
                         <div class="welcome-title">Welcome to Columbus Weather</div>
                         <div class="welcome-message">
-                            Select a location from the sidebar to view the official National Weather Service forecast.
-                            No API key required — all data is free and public.
+                            Loading initial data for 43215. Select another location from the sidebar to view its forecast.
                         </div>
                     </div>
                 </div>
@@ -798,6 +842,9 @@
         const sidebar = document.querySelector('.sidebar');
         const overlay = document.getElementById('sidebarOverlay');
         const hamburger = document.getElementById('hamburgerButton');
+        const display = document.getElementById('weatherDisplay');
+        const welcomeMessage = document.getElementById('welcomeMessage');
+        const ghostLoader = document.getElementById('ghostLoader');
 
         // Initialize sidebar
         function initializeSidebar() {
@@ -842,7 +889,7 @@
             if (weatherData[zip]) {
                 displayWeather(zip);
             } else {
-                fetchSingleLocation(zip);
+                fetchSingleLocation(zip, true); // Show loading spinner for new selections
             }
         }
 
@@ -856,7 +903,7 @@
             try {
                 const response = await fetch(`https://api.weather.gov/points/${lat},${lon}`, {
                     headers: {
-                        'User-Agent': 'Columbus Weather App (contact@example.com)',
+                        'User-Agent': '(columbus-weather-app, developer.contact@example.com)',
                         'Accept': 'application/geo+json'
                     }
                 });
@@ -886,7 +933,7 @@
                 // Get stations with proper headers
                 const stationsResponse = await fetch(stationsUrl, {
                     headers: {
-                        'User-Agent': 'Columbus Weather App',
+                        'User-Agent': '(columbus-weather-app, developer.contact@example.com)',
                         'Accept': 'application/geo+json'
                     }
                 });
@@ -899,7 +946,7 @@
                 const stationId = stationsData.features[0].properties.stationIdentifier;
                 const obsResponse = await fetch(`https://api.weather.gov/stations/${stationId}/observations/latest`, {
                     headers: {
-                        'User-Agent': 'Columbus Weather App',
+                        'User-Agent': '(columbus-weather-app, developer.contact@example.com)',
                         'Accept': 'application/geo+json'
                     }
                 });
@@ -913,18 +960,14 @@
             }
         }
 
-        async function fetchSingleLocation(zip, showLoading = true) {
+        async function fetchSingleLocation(zip, showLoading = false) {
             const coords = columbusZipCodes[zip];
-            const display = document.getElementById('weatherDisplay');
             
             if (showLoading) {
-                display.innerHTML = `
-                    <div class="loading-container">
-                        <div class="spinner"></div>
-                        <div class="loading-text">Loading weather for ${zip}...</div>
-                        <div class="loading-subtext">${coords.name}</div>
-                    </div>
-                `;
+                if(welcomeMessage) welcomeMessage.style.display = 'none';
+                if(ghostLoader) ghostLoader.style.display = 'flex';
+                display.innerHTML = ''; // Clear display for loader
+                display.appendChild(ghostLoader);
             }
 
             try {
@@ -934,7 +977,7 @@
                 // Fetch forecast with proper headers
                 const forecastResponse = await fetch(gridPoint.forecastUrl, {
                     headers: {
-                        'User-Agent': 'Columbus Weather App',
+                        'User-Agent': '(columbus-weather-app, developer.contact@example.com)',
                         'Accept': 'application/geo+json'
                     }
                 });
@@ -968,6 +1011,8 @@
                 
                 // Update main display if this is the currently active zip
                 if (zip === currentZipCode) {
+                    if(welcomeMessage) welcomeMessage.style.display = 'none';
+                    if(ghostLoader) ghostLoader.style.display = 'none';
                     displayWeather(zip);
                 }
                 
@@ -976,6 +1021,7 @@
             } catch (error) {
                 console.error(`Error fetching ${zip}:`, error);
                 if (zip === currentZipCode) { // Only show error if it's for the active view
+                    if(ghostLoader) ghostLoader.style.display = 'none';
                     displayError(error.message, zip);
                 }
                 return null;
@@ -996,7 +1042,7 @@
             
             // Fetch all locations in parallel
             const promises = Object.keys(columbusZipCodes).map(zip => 
-                fetchSingleLocation(zip, false)
+                fetchSingleLocation(zip, false) // false = don't show loading spinner
             );
             
             await Promise.allSettled(promises);
@@ -1083,10 +1129,10 @@
                 
                 if (data.current) {
                     const temp = data.current.temperature?.value;
-                    currentTemp = temp ? celsiusToFahrenheit(temp) : '';
+                    currentTemp = temp || temp === 0 ? celsiusToFahrenheit(temp) : '';
                     currentDesc = data.current.textDescription || '';
-                    windSpeed = data.current.windSpeed?.value ? Math.round(data.current.windSpeed.value * 2.237) : '';
-                    humidity = data.current.relativeHumidity?.value ? Math.round(data.current.relativeHumidity.value) : '';
+                    windSpeed = data.current.windSpeed?.value || data.current.windSpeed?.value === 0 ? Math.round(data.current.windSpeed.value * 2.237) : '';
+                    humidity = data.current.relativeHumidity?.value || data.current.relativeHumidity?.value === 0 ? Math.round(data.current.relativeHumidity.value) : '';
                 }
                 
                 // Extract forecast data
@@ -1112,8 +1158,10 @@
                         }
                     }
                     
-                    if (todayNight && !todayDay.isDaytime) {
+                    if (todayNight && !todayDay?.isDaytime) { // check if todayDay was *not* daytime
                         todayLow = todayNight.temperature;
+                    } else if (todayDay && !todayDay.isDaytime) { // if todayDay was actually tonight
+                         todayLow = todayDay.temperature;
                     }
                     
                     if (tomorrow) {
@@ -1127,7 +1175,7 @@
                     if (!todayForecast && periods.length > 0) {
                         todayForecast = `"${periods[0].shortForecast.replace(/"/g, '""')}"`;
                         todayHigh = periods[0].isDaytime ? periods[0].temperature : '';
-                        todayLow = periods[1] && !periods[1].isDaytime ? periods[1].temperature : '';
+                        todayLow = periods[1] && !periods[1].isDaytime ? periods[1].temperature : (periods[0] && !periods[0].isDaytime ? periods[0].temperature : '');
                     }
                     
                     if (!tomorrowForecast && periods.length > 2) {
@@ -1156,17 +1204,27 @@
                 ].join(','));
             });
             
-            // Create blob and download
+            // --- START CSV DOWNLOAD FIX ---
             const csvContent = csvRows.join('\n');
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             const timestamp = new Date().toISOString().split('T')[0];
             
-            link.href = URL.createObjectURL(blob);
+            const url = URL.createObjectURL(blob);
+            link.href = url;
             link.download = `columbus_weather_${timestamp}.csv`;
+            
+            // Append link to body, click it, and then remove it
+            document.body.appendChild(link);
             link.click();
             
-            URL.revokeObjectURL(link.href);
+            // Use a small timeout to ensure the download has time to start
+            // before we clean up the resources on a live server.
+            setTimeout(() => {
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }, 100);
+            // --- END CSV DOWNLOAD FIX ---
         }
 
         function formatTemperature(temp) {
@@ -1175,26 +1233,21 @@
         }
 
         function celsiusToFahrenheit(celsius) {
+            if (celsius === null || celsius === undefined) return '';
             return Math.round((celsius * 9/5) + 32);
         }
 
         function metersToMiles(meters) {
+            if (meters === null || meters === undefined) return '';
             return Math.round(meters * 0.000621371 * 10) / 10;
         }
 
         function displayWeather(zip) {
-            const display = document.getElementById('weatherDisplay');
             const data = weatherData[zip];
             const coords = columbusZipCodes[zip];
 
             if (!data) {
-                // This case should be rare now, but good to keep
-                display.innerHTML = `
-                    <div class="error-container">
-                        <div class="error-title">No Data Available</div>
-                        <div class="error-message">Click the location to load weather data.</div>
-                    </div>
-                `;
+                displayError("No data available for this location.", zip);
                 return;
             }
 
@@ -1204,7 +1257,7 @@
             // Current Conditions (if available)
             if (current) {
                 const temp = current.temperature?.value;
-                const tempF = temp ? celsiusToFahrenheit(temp) : null;
+                const tempF = temp || temp === 0 ? celsiusToFahrenheit(temp) : null;
                 const updateTime = new Date(current.timestamp).toLocaleTimeString('en-US', { 
                     hour: 'numeric', 
                     minute: '2-digit',
@@ -1232,7 +1285,7 @@
                         <div class="current-main">
                             <div>
                                 <div class="current-temp-display">
-                                    ${tempF ? `
+                                    ${tempF !== null ? `
                                         <span class="current-temp">${tempF}</span>
                                         <span class="temp-unit">°F</span>
                                     ` : '<span class="current-temp">--</span>'}
@@ -1243,13 +1296,13 @@
                             </div>
 
                             <div class="current-details">
-                                ${current.windSpeed?.value ? `
+                                ${(current.windSpeed?.value || current.windSpeed?.value === 0) ? `
                                     <div class="detail-item">
                                         <span class="detail-label">Wind</span>
                                         <span class="detail-value">${Math.round(current.windSpeed.value * 2.237)} mph ${current.windDirection?.value || ''}</span>
                                     </div>
                                 ` : ''}
-                                ${current.relativeHumidity?.value ? `
+                                ${(current.relativeHumidity?.value || current.relativeHumidity?.value === 0) ? `
                                     <div class="detail-item">
                                         <span class="detail-label">Humidity</span>
                                         <span class="detail-value">${Math.round(current.relativeHumidity.value)}%</span>
@@ -1267,13 +1320,13 @@
                                         <span class="detail-value">${metersToMiles(current.visibility.value)} mi</span>
                                     </div>
                                 ` : ''}
-                                ${current.dewpoint?.value ? `
+                                ${(current.dewpoint?.value || current.dewpoint?.value === 0) ? `
                                     <div class="detail-item">
                                         <span class="detail-label">Dewpoint</span>
                                         <span class="detail-value">${celsiusToFahrenheit(current.dewpoint.value)}°F</span>
                                     </div>
                                 ` : ''}
-                                ${current.heatIndex?.value && current.heatIndex.value > current.temperature?.value ? `
+                                ${current.heatIndex?.value && current.heatIndex.value > (current.temperature?.value || -Infinity) ? `
                                     <div class="detail-item">
                                         <span class="detail-label">Feels Like</span>
                                         <span class="detail-value">${celsiusToFahrenheit(current.heatIndex.value)}°F</span>
@@ -1346,12 +1399,12 @@
                     </div>
                 `;
             }
-
+            
+            // After building all HTML, inject it into the display
             display.innerHTML = html;
         }
 
         function displayError(message, zip) {
-            const display = document.getElementById('weatherDisplay');
             const coords = zip ? columbusZipCodes[zip] : null;
             
             display.innerHTML = `
@@ -1376,17 +1429,17 @@
             overlay.addEventListener('click', toggleSidebar);
             
             // Auto-load weather for default location
-            fetchSingleLocation(currentZipCode);
+            fetchSingleLocation(currentZipCode, true); // Show loader on first load
             
             // Start timer for status dot aging
             setInterval(updateStatusDots, 60000); // Check every minute
         });
 
         // Keyboard shortcuts
-        document.addEventListener('keypress', (e) => {
+        document.addEventListener('keydown', (e) => { // Use keydown to better catch Ctrl/Cmd
             if (e.key === 'r' && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
-                fetchAllLocations();
+                fetchAllLocations(); // <-- FIXED: Was fetchWeather()
             }
         });
     </script>
